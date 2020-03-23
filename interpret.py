@@ -8,7 +8,6 @@ sourcefile = sys.stdin
 varregex = "^(GF|LF|TF)@[a-zA-Z-_$&%*!?][a-zA-Z0-9-_$&%*!?]*$"
 var = {}
 calculate = []
-semantic = []
 ops = {"+": operator.add, "-": operator.sub, "/": operator.floordiv, "*": operator.mul}
 
 
@@ -94,26 +93,22 @@ def functions(opcode, arg, argumentcount):
 
     elif opcode == 'MUL':
         controlRightCountOfArguments(argumentcount, 3)
-        calculate.append(arg.text)
-        checkSemanticForArithmetic(argtype)
+        calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('*')
 
     elif opcode == 'IDIV':
         controlRightCountOfArguments(argumentcount, 3)
-        calculate.append(arg.text)
-        checkSemanticForArithmetic(argtype)
+        calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('/')
 
     elif opcode == 'ADD':
         controlRightCountOfArguments(argumentcount, 3)
-        calculate.append(arg.text)
-        checkSemanticForArithmetic(argtype)
+        calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('+')
 
     elif opcode == 'SUB':
         controlRightCountOfArguments(argumentcount, 3)
-        calculate.append(arg.text)
-        checkSemanticForArithmetic(argtype)
+        calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('-')
 
     elif opcode == 'WRITE':
@@ -127,18 +122,12 @@ def functions(opcode, arg, argumentcount):
         Error.error_exit("UNKNOWN OPCODE!\n", 53)
 
 
-def checkSemanticForArithmetic(arg):
-    if len(calculate) > 1:
-        semantic.append(arg)
-    return
-
-
 def stdoutprint(arg):
     # TODO NIL@NIL
     if re.match(r"{}".format(varregex), arg):
         if arg not in var.keys():
             Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
-        myprint(var.get(arg))
+        myprint(var.get(arg).split('@', 1)[1])
         return
 
     myprint(arg)
@@ -158,40 +147,43 @@ def arithmetic(operator):
     if len(calculate) < 3:
         return
 
-    op2 = calculate[1]
-    op3 = calculate[2]
+    op1 = calculate[0].split('@', 1)[1]
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    op3, type3 = calculate[2].split('@', 1)[1], calculate[2].split('@', 1)[0]
 
-    if not re.match(r"{}".format(varregex), calculate[0]):
+    if not re.match(r"{}".format(varregex), op1):
         Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
-    if not calculate[0] in var.keys():
+    if not op1 in var.keys():
         Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
-    if not (re.match(r"{}".format(varregex), calculate[1]) or re.match(r"[+\-]?\d+", calculate[1])):
+    if not (re.match(r"{}".format(varregex), op2) or re.match(r"[+\-]?\d+", op2)):
         Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
-    if not (re.match(r"{}".format(varregex), calculate[2]) or re.match(r"[+\-]?\d+", calculate[2])):
+    if not (re.match(r"{}".format(varregex), op3) or re.match(r"[+\-]?\d+", op3)):
         Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
 
-    if re.match(r"{}".format(varregex), calculate[1]):
-        if not calculate[1] in var.keys():
-            Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
-        op2 = var.get(calculate[1])
-        if op2 == '':
-            Error.error_exit("PREMENNA JE PRAZDNA!\n", 56)
+    if re.match(r"{}".format(varregex), op2):
+        type2, op2 = variableIsGiven(op2)
 
-    if re.match(r"{}".format(varregex), calculate[2]):
-        if not calculate[2] in var.keys():
-            Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
-        op3 = var.get(calculate[2])
-        if op3 == '':
-            Error.error_exit("PREMENNA JE PRAZDNA!\n", 56)
+    if re.match(r"{}".format(varregex), op3):
+        type3, op3 = variableIsGiven(op3)
 
     if operator == '/' and int(op3) == 0:
         Error.error_exit("ZERO DIVISION!\n", 57)
-    var.update({calculate[0]: ops["{}".format(operator)](int(op2), int(op3))})
+    result = ops["{}".format(operator)](int(op2), int(op3))
+    var.update({op1: "int@{}".format(result)})
 
     calculate.clear()
-    if semantic[0] != 'int' or semantic[1] != 'int':
+    if type2 != 'int' or type3 != 'int':
         Error.error_exit("ZLY TYP PRE ARITMETICKU OPERACIU!\n", 53)
-    semantic.clear()
+
+
+def variableIsGiven(op):
+    if not op in var.keys():
+        Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
+    ops = var.get(op)
+    if ops == '':
+        Error.error_exit("PREMENNA JE PRAZDNA!\n", 56)
+    types, op = var.get(op).split('@', 1)[0], var.get(op).split('@', 1)[1]
+    return types, op
 
 
 ##########################################################################
