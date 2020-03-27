@@ -74,20 +74,72 @@ def printHelp():
     exit(0)
 
 
+def controlFlowForArgs1(args):
+    final = []
+    for arg in args:
+        if arg.tag == 'arg1':
+            final.insert(0, arg)
+        else:
+            Error.error_exit("BAD XML!\n", 12)
+
+    args.remove(args.getchildren()[0])
+    args.append(final[0])
+
+
+def controlFlowForArgs2(args):
+    final = []
+    for arg in args:
+        if arg.tag == 'arg1':
+            final.insert(0, arg)
+        elif arg.tag == 'arg2':
+            final.insert(1, arg)
+        else:
+            Error.error_exit("BAD XML!\n", 12)
+
+    args.remove(args.getchildren()[0])
+    args.remove(args.getchildren()[0])
+    args.append(final[0])
+    args.append(final[1])
+
+
+def controlFlowForArgs3(args):
+    final = []
+    for arg in args:
+        if arg.tag == 'arg1':
+            final.insert(0, arg)
+        elif arg.tag == 'arg2':
+            final.insert(1, arg)
+        elif arg.tag == 'arg3':
+            final.insert(2, arg)
+        else:
+            Error.error_exit("BAD XML!\n", 12)
+
+    args.remove(args.getchildren()[0])
+    args.remove(args.getchildren()[0])
+    args.remove(args.getchildren()[0])
+    args.append(final[0])
+    args.append(final[1])
+    args.append(final[2])
+
+
 def parseXML(child):
     args = []
     opcode = list(child.attrib.values())[1]
-    argnumber = 1
     argumentcount = len(child)
+
+    if argumentcount == 3:
+        controlFlowForArgs3(child)
+    if argumentcount == 2:
+        controlFlowForArgs2(child)
+    if argumentcount == 1:
+        controlFlowForArgs1(child)
+
     for arg in child:
-        if arg.tag != 'arg{}'.format(argnumber):
-            Error.error_exit("BAD XML!\n", 12)
         args.append(arg)
         functions(opcode, arg, argumentcount)
         # arg.tag == arg1, arg2 atd
         # arg.text == GF@a, 5, string, true, false....
         # arg.attrib.values()[0] == var, bool, string, int,...
-        argnumber += 1
 
 
 def functions(opcode, arg, argumentcount):
