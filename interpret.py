@@ -199,10 +199,40 @@ def functions(opcode, arg, argumentcount):
     elif opcode == 'CALL':
         if arg.text not in labels.keys():
             Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
-        index += labels.get(arg.text) - 1
+        index = labels.get(arg.text) - 1
+
+    elif opcode == 'MOVE':
+        controlRightCountOfArguments(argumentcount, 2)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        move()
 
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 53)
+
+
+def move():
+    if len(calculate) < 2:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if op1 not in var.keys():
+        Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
+
+    if re.match(r"{}".format(varregex), op2):
+        type2, op2 = variableIsGiven(op2)
+
+    var.update({op1: "{}@{}".format(type2, op2)})
+
+    calculate.clear()
 
 
 def compare(operator):
