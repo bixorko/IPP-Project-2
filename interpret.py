@@ -151,6 +151,19 @@ def parseXML(child):
         tempframe = False
         return
 
+    if opcode == 'POPFRAME':
+        if not localframe:
+            Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI PUSHFRAME!\n", 55)
+        varTF = varLF
+        varLF = {}
+        for item in varTF.keys():
+            if re.match(r"LF@\S", item):
+                string = item.split('@', 1)[1]
+                varTF[f'TF@{string}'] = varTF.pop(f'LF@{string}')
+        localframe = False
+        tempframe = True
+        return
+
     if argumentcount == 3:
         controlFlowForArgs3(child)
     if argumentcount == 2:
@@ -240,7 +253,7 @@ def functions(opcode, arg, argumentcount):
     elif opcode == 'LABEL':
         pass
 
-    elif opcode == 'CALL':
+    elif opcode == 'JUMP':
         if arg.text not in labels.keys():
             Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
         index = labels.get(arg.text) - 1
@@ -378,7 +391,15 @@ def compare(operator):
             Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
         type3, op3 = variableIsGiven(op3)
 
-    result = ops["{}".format(operator)](op2, op3)
+    if (type2 == 'nil' or type3 == 'nil') and operator != '=':
+        Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+    if (type2 == 'int' or type3 == 'int') and operator != '=':
+        if type2 != type3:
+            Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+        result = ops["{}".format(operator)](int(op2), int(op3))
+    else:
+        result = ops["{}".format(operator)](op2, op3)
+
     if op1[0:2] == 'GF':
         var.update({op1: "bool@{}".format(str(result).lower())})
     if op1[0:2] == 'LF':
@@ -388,6 +409,8 @@ def compare(operator):
 
     calculate.clear()
     if type2 != type3:
+        if (type2 == 'nil' or type3 == 'nil') and operator == '=':
+            return
         Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
 
 
@@ -521,6 +544,17 @@ for child in instructions:
         labelindex = index
         labels.update({labelname: labelindex})
     index += 1
+
+
+
+for child in instructions:
+    for arg in child:
+        for k in arg.attrib.values():
+            if k == 'string':
+                escaped = re.findall(r'(\\[0-9]{3})+', str(arg.text))
+                for escape in escaped:
+                    changed = chr(int(escape[1:]))
+                    arg.text = arg.text.replace(escape, changed)
 
 index = 0
 i = 0
