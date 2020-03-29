@@ -308,10 +308,14 @@ def functions(opcode, arg, argumentcount):
         pass
 
     elif opcode == 'STRLEN':
-        pass
+        controlRightCountOfArguments(argumentcount, 2)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        strlen()
 
     elif opcode == 'GETCHAR':
-        pass
+        controlRightCountOfArguments(argumentcount, 3)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        getchar()
 
     elif opcode == 'SETCHAR':
         pass
@@ -337,6 +341,101 @@ def functions(opcode, arg, argumentcount):
 
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 53)
+
+
+def concat():
+    pass
+
+
+def getchar():
+    if len(calculate) < 3:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    op3, type3 = calculate[2].split('@', 1)[1], calculate[2].split('@', 1)[0]
+
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[2])):
+        Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
+
+    if op1 not in var.keys():
+        checkIfVarExists(localframe, tempframe, op1)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    if type2 != 'string' or type3 != 'int':
+        Error.error_exit("ZLY TYP PRE GETCHAR OPERACIU!\n", 53)
+
+    if int(op3) >= len(op2) or int(op3) < 0:
+        Error.error_exit("OP3 MIMO ROZSAHU STRLEN(op2)\n", 58)
+    result = op2[int(op3)]
+
+    if op1[0:2] == 'GF':
+        var.update({op1: "string@{}".format(str(result))})
+    if op1[0:2] == 'LF':
+        varLF.update({op1: "string@{}".format(str(result))})
+    if op1[0:2] == 'TF':
+        varTF.update({op1: "string@{}".format(str(result))})
+
+    calculate.clear()
+
+
+def strlen():
+    if len(calculate) < 2:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    if op1 not in var.keys():
+        checkIfVarExists(localframe, tempframe, op1)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if type2 != 'string':
+        Error.error_exit("ZLY TYP PRE STRLEN OPERACIU!\n", 53)
+
+    result = len(op2)
+    if op2 == 'None':
+        result = 0
+
+    if op1[0:2] == 'GF':
+        var.update({op1: "int@{}".format(str(result).lower())})
+    if op1[0:2] == 'LF':
+        varLF.update({op1: "int@{}".format(str(result).lower())})
+    if op1[0:2] == 'TF':
+        varTF.update({op1: "int@{}".format(str(result).lower())})
+
+    calculate.clear()
 
 
 def int2char():
