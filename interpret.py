@@ -18,7 +18,7 @@ localframe = False
 tempframe = False
 calculate = []
 ops = {"+": operator.add, "-": operator.sub, "/": operator.floordiv, "*": operator.mul,
-       "<": operator.lt, ">": operator.gt, "=": operator.eq}
+       "<": operator.lt, ">": operator.gt, "=": operator.eq, "!=": operator.ne}
 index = 0
 controlindex = 0
 
@@ -254,15 +254,20 @@ def functions(opcode, arg, argumentcount):
         pass
 
     elif opcode == 'JUMP':
+        controlRightCountOfArguments(argumentcount, 1)
         if arg.text not in labels.keys():
             Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
         index = labels.get(arg.text) - 1
 
     elif opcode == 'JUMPIFNEQ':
-        pass
+        controlRightCountOfArguments(argumentcount, 3)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        jumpifeq('!=')
 
     elif opcode == 'JUMPIFEQ':
-        pass
+        controlRightCountOfArguments(argumentcount, 3)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        jumpifeq('=')
 
     elif opcode == 'CALL':
         pass
@@ -305,7 +310,9 @@ def functions(opcode, arg, argumentcount):
         pass
 
     elif opcode == 'CONCAT':
-        pass
+        controlRightCountOfArguments(argumentcount, 3)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        concat()
 
     elif opcode == 'STRLEN':
         controlRightCountOfArguments(argumentcount, 2)
@@ -321,7 +328,9 @@ def functions(opcode, arg, argumentcount):
         pass
 
     elif opcode == 'EXIT':
-        pass
+        controlRightCountOfArguments(argumentcount, 1)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        exitProg()
 
     elif opcode == 'MOVE':
         controlRightCountOfArguments(argumentcount, 2)
@@ -343,8 +352,140 @@ def functions(opcode, arg, argumentcount):
         Error.error_exit("UNKNOWN OPCODE!\n", 53)
 
 
+def jumpifeq(operator):
+    if len(calculate) < 3:
+        return
+
+    global index
+    result = False
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if not re.match(r"^label@\S+$", calculate[0]):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[2])):
+        Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    op3, type3 = calculate[2].split('@', 1)[1], calculate[2].split('@', 1)[0]
+
+    if op1 not in labels.keys():
+        Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    calculate.clear()
+    if type2 != 'nil' and type3 != 'nil':
+        if type2 != type3:
+            Error.error_exit("ZLY TYP PRE JUMPIFEQ OPERACIU!\n", 53)
+        if type2 == 'int' or type3 == 'int':
+            if type2 != type3:
+                Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+            result = ops["{}".format(operator)](int(op2), int(op3))
+        else:
+            result = ops["{}".format(operator)](op2, op3)
+    else:
+        if operator == '=':
+            if type2 == 'nil' and type3 == 'nil':
+                result = True
+            else:
+                result = False
+        elif operator == '!=':
+            if type2 == 'nil' and type3 == 'nil':
+                result = False
+            else:
+                result = True
+
+    if result:
+        index = labels.get(op1) - 1
+
+
+def exitProg():
+    if len(calculate) < 1:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if not re.match(r"{}".format(symbol_regex), calculate[0]):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op1):
+        checkIfVarExists(localframe, tempframe, op1)
+        if not (var.get(op1) or varLF.get(op1) or varTF.get(op1)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type1, op1 = variableIsGiven(op1)
+
+    if type1 != 'int':
+        Error.error_exit("ZLY TYP PRE EXIT OPERACIU!\n", 53)
+
+    calculate.clear()
+    if int(op1) < 0 or int(op1) > 49:
+        Error.error_exit("ZLY OPERAND PRE EXIT\n", 57)
+    exit(int(op1))
+
+
 def concat():
-    pass
+    if len(calculate) < 3:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    op3, type3 = calculate[2].split('@', 1)[1], calculate[2].split('@', 1)[0]
+
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[2])):
+        Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
+
+    if op1 not in var.keys():
+        checkIfVarExists(localframe, tempframe, op1)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    if type2 != 'string' or type3 != 'string':
+        Error.error_exit("ZLY TYP PRE CONCAT OPERACIU!\n", 53)
+
+    if op2 == 'None':
+        op2 = ''
+    if op3 == 'None':
+        op3 = ''
+    result = op2 + op3
+
+    if op1[0:2] == 'GF':
+        var.update({op1: "string@{}".format(str(result))})
+    if op1[0:2] == 'LF':
+        varLF.update({op1: "string@{}".format(str(result))})
+    if op1[0:2] == 'TF':
+        varTF.update({op1: "string@{}".format(str(result))})
+
+    calculate.clear()
 
 
 def getchar():
