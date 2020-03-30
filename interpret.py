@@ -20,7 +20,8 @@ calculate = []
 ops = {"+": operator.add, "-": operator.sub, "/": operator.floordiv, "*": operator.mul,
        "<": operator.lt, ">": operator.gt, "=": operator.eq, "!=": operator.ne}
 index = 0
-controlindex = 0
+returnIndex = 0
+callWasUsed = False
 
 
 class ErrorHandling:
@@ -132,6 +133,8 @@ def parseXML(child):
     args = []
     opcode = list(child.attrib.values())[1]
     argumentcount = len(child)
+    global index
+    global callWasUsed
 
     if opcode == 'CREATEFRAME':
         varTF = {}
@@ -164,6 +167,12 @@ def parseXML(child):
         tempframe = True
         return
 
+    if opcode == 'RETURN':
+        if not callWasUsed:
+            Error.error_exit("CALL NEBOL POUZITY!\n", 56)
+        index = returnIndex
+        callWasUsed = False
+
     if argumentcount == 3:
         controlFlowForArgs3(child)
     if argumentcount == 2:
@@ -186,6 +195,8 @@ def functions(opcode, arg, argumentcount):
     global localframe
     argtype = list(arg.attrib.values())[0]
     global index
+    global returnIndex
+    global callWasUsed
 
     if opcode == 'DEFVAR':
         if not re.match(r"{}".format(varregex), arg.text):
@@ -270,10 +281,12 @@ def functions(opcode, arg, argumentcount):
         jumpifeq('=')
 
     elif opcode == 'CALL':
-        pass
-
-    elif opcode == 'RETURN':
-        pass
+        controlRightCountOfArguments(argumentcount, 1)
+        if arg.text not in labels.keys():
+            Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
+        callWasUsed = True
+        returnIndex = index
+        index = labels.get(arg.text) - 1
 
     elif opcode == 'PUSHS':
         pass
@@ -1057,6 +1070,8 @@ for child in instructions:
         for arg in child:
             labelname = arg.text
         labelindex = index
+        if labelname in labels.keys():
+            Error.error_exit("REDEFINICIA NAVESTIA!\n", 52)
         labels.update({labelname: labelindex})
     index += 1
 
