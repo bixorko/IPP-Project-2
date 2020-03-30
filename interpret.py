@@ -23,6 +23,8 @@ index = 0
 returnIndex = 0
 callWasUsed = False
 
+stack = []
+
 
 class ErrorHandling:
     def __init__(self, message, code):
@@ -197,6 +199,7 @@ def functions(opcode, arg, argumentcount):
     global index
     global returnIndex
     global callWasUsed
+    global stack
 
     if opcode == 'DEFVAR':
         if not re.match(r"{}".format(varregex), arg.text):
@@ -289,10 +292,14 @@ def functions(opcode, arg, argumentcount):
         index = labels.get(arg.text) - 1
 
     elif opcode == 'PUSHS':
-        pass
+        controlRightCountOfArguments(argumentcount, 1)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        stackPush()
 
     elif opcode == 'POPS':
-        pass
+        controlRightCountOfArguments(argumentcount, 1)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        stackPop()
 
     elif opcode == 'AND':
         controlRightCountOfArguments(argumentcount, 3)
@@ -363,6 +370,58 @@ def functions(opcode, arg, argumentcount):
 
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 53)
+
+
+def stackPop():
+    global stack
+    if len(calculate) < 1:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op1):
+        checkIfVarExists(localframe, tempframe, op1)
+
+    calculate.clear()
+    try:
+        result = stack.pop()
+    except:
+        Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    op2, type2 = result.split('@', 1)[1], result.split('@', 1)[0]
+
+    if op1[0:2] == 'GF':
+        var.update({op1: "{}@{}".format(type2, op2)})
+    if op1[0:2] == 'LF':
+        varLF.update({op1: "{}@{}".format(type2, op2)})
+    if op1[0:2] == 'TF':
+        varTF.update({op1: "{}@{}".format(type2, op2)})
+
+
+def stackPush():
+    global stack
+    if len(calculate) < 1:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if not re.match(r"{}".format(symbol_regex), calculate[0]):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op1):
+        checkIfVarExists(localframe, tempframe, op1)
+        if not (var.get(op1) or varLF.get(op1) or varTF.get(op1)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type1, op1 = variableIsGiven(op1)
+
+    calculate.clear()
+    result = type1 + '@' + op1
+    stack.append(result)
 
 
 def jumpifeq(operator):
