@@ -651,8 +651,23 @@ def typecheck():
     if re.match(r"{}".format(varregex), op2):
         checkIfVarExists(localframe, tempframe, op2)
         if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
-            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
-        type2, op2 = variableIsGiven(op2)
+            if not (op2 in var.keys() or op2 in varLF.keys() or op2 in varTF.keys()):
+                Error.error_exit("NEEXISTUJUCA PREMENNA!\n", 54)
+            if op2[0:2] == 'GF':
+                ops = var.get(op2)
+            if op2[0:2] == 'LF':
+                ops = varLF.get(op2)
+            if op2[0:2] == 'TF':
+                ops = varTF.get(op2)
+            if op2[0:2] == 'GF':
+                type2 = var.get(op2).split('@', 1)[0]
+            if op2[0:2] == 'LF':
+                type2 = varLF.get(op2).split('@', 1)[0]
+            if op2[0:2] == 'TF':
+                type2 = varTF.get(op2).split('@', 1)[0]
+            type2, op2 = type2, ops
+        else:
+            type2, op2 = variableIsGiven(op2)
 
     if op1[0:2] == 'GF':
         var.update({op1: "string@{}".format(type2)})
