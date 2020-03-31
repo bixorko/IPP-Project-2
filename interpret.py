@@ -327,7 +327,9 @@ def functions(opcode, arg, argumentcount):
         int2char()
 
     elif opcode == 'READ':
-        pass
+        controlRightCountOfArguments(argumentcount, 2)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        readInstruction()
 
     elif opcode == 'CONCAT':
         controlRightCountOfArguments(argumentcount, 3)
@@ -370,6 +372,66 @@ def functions(opcode, arg, argumentcount):
 
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 53)
+
+
+def readInstruction():
+    if len(calculate) < 2:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    checkIfVarExists(localframe,tempframe,op1)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    calculate.clear()
+
+    if type2 != 'type':
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (op2 == 'int' or op2 == 'string' or op2 == 'bool'):
+        if op1[0:2] == 'GF':
+            var.update({op1: "nil@nil"})
+        if op1[0:2] == 'LF':
+            varLF.update({op1: "nil@nil"})
+        if op1[0:2] == 'TF':
+            varTF.update({op1: "nil@nil"})
+        return
+    try:
+        loaded = input()
+    except:
+        if op1[0:2] == 'GF':
+            var.update({op1: "nil@nil"})
+        if op1[0:2] == 'LF':
+            varLF.update({op1: "nil@nil"})
+        if op1[0:2] == 'TF':
+            varTF.update({op1: "nil@nil"})
+        return
+
+    if not loaded.lstrip('+-').isdigit() and op2 == 'int':
+        if op1[0:2] == 'GF':
+            var.update({op1: "nil@nil"})
+        if op1[0:2] == 'LF':
+            varLF.update({op1: "nil@nil"})
+        if op1[0:2] == 'TF':
+            varTF.update({op1: "nil@nil"})
+        return
+    elif op2 == 'bool':
+        if loaded.lower() == 'true':
+            result = 'bool@true'
+        else:
+            result = 'bool@false'
+    else:
+        result = f"{op2}@{loaded}"
+
+    if op1[0:2] == 'GF':
+        var.update({op1: f"{result}"})
+    if op1[0:2] == 'LF':
+        varLF.update({op1: f"{result}"})
+    if op1[0:2] == 'TF':
+        varTF.update({op1: f"{result}"})
 
 
 def stackPop():
@@ -847,9 +909,11 @@ def logical(operator):
 def typecheck():
     if len(calculate) < 2:
         return
+
     op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
     if type1 != 'var':
         Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
     if not (re.match(r"{}".format(symbol_regex), calculate[1])):
         Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
 
@@ -888,6 +952,7 @@ def typecheck():
         varLF.update({op1: "string@{}".format(type2)})
     if op1[0:2] == 'TF':
         varTF.update({op1: "string@{}".format(type2)})
+
     calculate.clear()
 
 
@@ -1117,6 +1182,12 @@ def variableIsGiven(op):
 parseArguments()
 
 try:
+    if inputfile.name == '<stdin>':
+        pass
+except:
+    sys.stdin = open(inputfile, "r")
+
+try:
     root = ET.parse(sourcefile).getroot()
 except:
     Error.error_exit("BAD XML!\n", 12)
@@ -1133,8 +1204,6 @@ for child in instructions:
             Error.error_exit("REDEFINICIA NAVESTIA!\n", 52)
         labels.update({labelname: labelindex})
     index += 1
-
-
 
 for child in instructions:
     for arg in child:
