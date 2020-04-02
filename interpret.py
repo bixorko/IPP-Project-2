@@ -1190,7 +1190,18 @@ except:
 try:
     root = ET.parse(sourcefile).getroot()
 except:
-    Error.error_exit("BAD XML!\n", 12)
+    Error.error_exit("BAD XML!\n", 31)
+
+actualorder = 0
+for child in root:
+    for checkkeys in child.attrib.keys():
+        if checkkeys != 'order' and checkkeys != 'opcode':
+            Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
+    if child.tag != 'instruction':
+        Error.error_exit("BAD XML INSTRUCTION FORMAT!\n", 32)
+    if int(actualorder) >= int(child.attrib["order"]):
+        Error.error_exit("BAD ORDER\n", 32)
+    actualorder = child.attrib["order"]
 
 instructions = root.findall("instruction")
 
