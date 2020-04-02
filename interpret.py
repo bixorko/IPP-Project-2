@@ -25,6 +25,18 @@ callWasUsed = False
 
 stack = []
 
+LFBoolStack = []
+LFBoolStack.append(False)
+
+LFStack = []
+LFStack.append(0)
+
+callStack = []
+callStack.append(False)
+
+callStackIndex = []
+callStackIndex.append(-1)
+
 
 class ErrorHandling:
     def __init__(self, message, code):
@@ -132,11 +144,14 @@ def parseXML(child):
     global varLF
     global tempframe
     global localframe
+    global callStackIndex
     args = []
     opcode = list(child.attrib.values())[1].upper()
     argumentcount = len(child)
     global index
     global callWasUsed
+
+    localframe = LFBoolStack[len(LFBoolStack)-1]
 
     if opcode == 'CREATEFRAME':
         varTF = {}
@@ -152,28 +167,32 @@ def parseXML(child):
             if re.match(r"TF@\S", item):
                 string = item.split('@', 1)[1]
                 varLF[f'LF@{string}'] = varLF.pop(f'TF@{string}')
-        localframe = True
+        LFStack.append(varLF)
+        LFBoolStack.append(True)
         tempframe = False
         return
 
     if opcode == 'POPFRAME':
         if not localframe:
-            Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI PUSHFRAME!\n", 55)
-        varTF = varLF
-        varLF = {}
+            Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI POPFRAME!\n", 55)
+
+        varTF = LFStack.pop()
         for item in varTF.keys():
             if re.match(r"LF@\S", item):
                 string = item.split('@', 1)[1]
                 varTF[f'TF@{string}'] = varTF.pop(f'LF@{string}')
-        localframe = False
+
+        LFBoolStack.pop()
+        varLF = LFStack.pop()
+        LFStack.append(varLF)
         tempframe = True
         return
 
     if opcode == 'RETURN':
-        if not callWasUsed:
+        if len(callStack) <= 0:
             Error.error_exit("CALL NEBOL POUZITY!\n", 56)
-        index = returnIndex
-        callWasUsed = False
+        index = callStackIndex.pop()
+        callStack.pop()
 
     if argumentcount == 3:
         controlFlowForArgs3(child)
@@ -198,7 +217,7 @@ def functions(opcode, arg, argumentcount):
     argtype = list(arg.attrib.values())[0]
     global index
     global returnIndex
-    global callWasUsed
+    global callStackIndex
     global stack
 
     if opcode == 'DEFVAR':
@@ -287,8 +306,9 @@ def functions(opcode, arg, argumentcount):
         controlRightCountOfArguments(argumentcount, 1)
         if arg.text not in labels.keys():
             Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
-        callWasUsed = True
+        callStack.append(True)
         returnIndex = index
+        callStackIndex.append(returnIndex)
         index = labels.get(arg.text) - 1
 
     elif opcode == 'PUSHS':
@@ -992,13 +1012,19 @@ def move():
 
 def checkIfVarExists(localframe, tempframe, op1):
     if op1[0:2] == 'LF' or op1[0:2] == 'TF':
-        if localframe:
+        if localframe and tempframe:
+            if op1[0:2] != 'LF' and op1[0:2] != 'GF' and op1[0:2] != 'TF':
+                Error.error_exit("NEEXISTUJUCI RAMEC! {}\n".format(operator), 55)
+            if op1 not in var.keys() and op1 not in varLF.keys() and op1 not in varTF.keys():
+                Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
+            return
+        elif localframe:
             if op1[0:2] != 'LF' and op1[0:2] != 'GF':
                 Error.error_exit("NEEXISTUJUCI RAMEC! {}\n".format(operator), 55)
             if op1 not in var.keys() and op1 not in varLF.keys():
                 Error.error_exit("NEEXISTUJUCA PREMENNA! {}\n".format(operator), 54)
             return
-        if tempframe:
+        elif tempframe:
             if op1[0:2] != 'TF' and op1[0:2] != 'GF':
                 Error.error_exit("NEEXISTUJUCI RAMEC! {}\n".format(operator), 55)
             if op1 not in var.keys() and op1 not in varTF.keys():
