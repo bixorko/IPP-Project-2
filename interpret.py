@@ -97,7 +97,7 @@ def controlFlowForArgs1(args):
         if arg.tag == 'arg1':
             final.insert(0, arg)
         else:
-            Error.error_exit("BAD XML!\n", 12)
+            Error.error_exit("BAD XML!\n",32)
 
     args.remove(args.getchildren()[0])
     args.append(final[0])
@@ -111,7 +111,7 @@ def controlFlowForArgs2(args):
         elif arg.tag == 'arg2':
             final.insert(1, arg)
         else:
-            Error.error_exit("BAD XML!\n", 12)
+            Error.error_exit("BAD XML!\n", 32)
 
     args.remove(args.getchildren()[0])
     args.remove(args.getchildren()[0])
@@ -129,7 +129,7 @@ def controlFlowForArgs3(args):
         elif arg.tag == 'arg3':
             final.insert(2, arg)
         else:
-            Error.error_exit("BAD XML!\n", 12)
+            Error.error_exit("BAD XML!\n", 32)
 
     args.remove(args.getchildren()[0])
     args.remove(args.getchildren()[0])
@@ -1280,10 +1280,22 @@ except:
     Error.error_exit("BAD XML!\n", 31)
 
 actualorder = 0
+argcontrol = []
+
+try:
+    if root.attrib["language"].upper() != 'IPPCODE20':
+        Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
+except:
+    Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
+
 for child in root:
     for checkkeys in child.attrib.keys():
         if checkkeys != 'order' and checkkeys != 'opcode':
             Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
+        argcontrol.append(checkkeys)
+    if len(argcontrol) != 2 or argcontrol[0] != 'order' or argcontrol[1] != 'opcode':
+        Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
+    argcontrol.clear()
     if child.tag != 'instruction':
         Error.error_exit("BAD XML INSTRUCTION FORMAT!\n", 32)
     if int(actualorder) >= int(child.attrib["order"]):
