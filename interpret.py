@@ -367,7 +367,9 @@ def functions(opcode, arg, argumentcount):
         getchar()
 
     elif opcode == 'SETCHAR':
-        pass
+        controlRightCountOfArguments(argumentcount, 3)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        setchar()
 
     elif opcode == 'EXIT':
         controlRightCountOfArguments(argumentcount, 1)
@@ -392,6 +394,65 @@ def functions(opcode, arg, argumentcount):
 
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 32)
+
+
+def setchar():
+    if len(calculate) < 3:
+        return
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    if type1 != 'var':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    checkIfVarExists(localframe, tempframe, op1)
+    type11, string = variableIsGiven(op1)
+
+    if type11 != 'string':
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    op3, type3 = calculate[2].split('@', 1)[1], calculate[2].split('@', 1)[0]
+
+    if not re.match(r"{}".format(varregex), op1):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[2])):
+        Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    if type2 != 'int' or type3 != 'string':
+        Error.error_exit("ZLY TYP PRE SETCHAR OPERACIU!\n", 53)
+
+    if int(op2) < 0 or int(op2) > len(string) - 1 or op3 == 'None':
+        Error.error_exit("OP3 MIMO ROZSAHU SETCHAR(op1)\n", 58)
+
+    if re.match(r"^(\\[0-9]{3})", op3[0:4]):
+        toresult = op3[0:4]
+        op3 = chr(int(toresult[1:]))
+
+    lstring = list(string)
+    lstring[int(op2)] = op3[0]
+    result = "".join(lstring)
+
+    if op1[0:2] == 'GF':
+        var.update({op1: "string@{}".format(str(result))})
+    if op1[0:2] == 'LF':
+        varLF.update({op1: "string@{}".format(str(result))})
+    if op1[0:2] == 'TF':
+        varTF.update({op1: "string@{}".format(str(result))})
+
+    calculate.clear()
 
 
 def readInstruction():
