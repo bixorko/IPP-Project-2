@@ -133,7 +133,7 @@ def parseXML(child):
     global tempframe
     global localframe
     args = []
-    opcode = list(child.attrib.values())[1]
+    opcode = list(child.attrib.values())[1].upper()
     argumentcount = len(child)
     global index
     global callWasUsed
@@ -371,7 +371,7 @@ def functions(opcode, arg, argumentcount):
         pass
 
     else:
-        Error.error_exit("UNKNOWN OPCODE!\n", 53)
+        Error.error_exit("UNKNOWN OPCODE!\n", 32)
 
 
 def readInstruction():
@@ -1195,7 +1195,7 @@ except:
 instructions = root.findall("instruction")
 
 for child in instructions:
-    opcode = list(child.attrib.values())[1]
+    opcode = list(child.attrib.values())[1].upper()
     if opcode == 'LABEL':
         for arg in child:
             labelname = arg.text
