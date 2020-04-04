@@ -1298,7 +1298,11 @@ for child in root:
     argcontrol.clear()
     if child.tag != 'instruction':
         Error.error_exit("BAD XML INSTRUCTION FORMAT!\n", 32)
-    if int(actualorder) >= int(child.attrib["order"]):
+    try:
+        gotorder = int(child.attrib["order"])
+    except:
+        Error.error_exit("BAD ORDER\n", 32)
+    if int(actualorder) >= gotorder:
         Error.error_exit("BAD ORDER\n", 32)
     actualorder = child.attrib["order"]
 
