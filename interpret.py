@@ -154,11 +154,15 @@ def parseXML(child):
     localframe = LFBoolStack[len(LFBoolStack)-1]
 
     if opcode == 'CREATEFRAME':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
         varTF = {}
         tempframe = True
         return
 
     if opcode == 'PUSHFRAME':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
         if not tempframe:
             Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI PUSHFRAME!\n", 55)
         varLF = varTF
@@ -173,6 +177,8 @@ def parseXML(child):
         return
 
     if opcode == 'POPFRAME':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
         if not localframe:
             Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI POPFRAME!\n", 55)
 
@@ -189,10 +195,88 @@ def parseXML(child):
         return
 
     if opcode == 'RETURN':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
         if len(callStack) <= 0:
             Error.error_exit("CALL NEBOL POUZITY!\n", 56)
         index = callStackIndex.pop()
         callStack.pop()
+        return
+
+    if opcode == 'ADDS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        arithmeticsS('+')
+        return
+
+    if opcode == 'IDIVS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        arithmeticsS('/')
+        return
+
+    if opcode == 'MULS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        arithmeticsS('*')
+        return
+
+    if opcode == 'SUBS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        arithmeticsS('-')
+        return
+
+    if opcode == 'EQS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        compareS('=')
+        return
+
+    if opcode == 'LTS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        compareS('>')
+        return
+
+    if opcode == 'GTS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        compareS('<')
+        return
+
+    if opcode == 'ANDS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        logicalS('=')
+        return
+
+    if opcode == 'ORS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        logicalS('or')
+        return
+
+    if opcode == 'NOTS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        logicalSnot('not')
+        return
+
+    if opcode == 'STRI2INTS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        stri2intS()
+        return
+
+    if opcode == 'INT2CHARS':
+        if argumentcount != 0:
+            Error.error_exit("BAD XML!\n", 32)
+        int2charS()
+        return
+
+    if argumentcount == 0:
+        Error.error_exit("BAD XML!\n", 32)
 
     if argumentcount == 3:
         controlFlowForArgs3(child)
@@ -221,6 +305,7 @@ def functions(opcode, arg, argumentcount):
     global stack
 
     if opcode == 'DEFVAR':
+        controlRightCountOfArguments(argumentcount, 1)
         if not re.match(r"{}".format(varregex), arg.text):
             Error.error_exit("WRONG FORMAT FOR DEFVAR!\n", 53)
         if arg.text[0:2] == 'LF':
@@ -392,8 +477,337 @@ def functions(opcode, arg, argumentcount):
     elif opcode == 'BREAK':
         pass
 
+    elif opcode == 'JUMPIFEQS':
+        controlRightCountOfArguments(argumentcount, 1)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        jumpifeqS('=')
+
+    elif opcode == 'JUMPIFNEQS':
+        controlRightCountOfArguments(argumentcount, 1)
+        calculate.append("{}@{}".format(argtype, arg.text))
+        jumpifeqS('!=')
+
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 32)
+
+
+def stri2intS():
+    global calculate
+
+    for m in range(0, 2):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    op3, type3 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+
+    if not (re.match(r"{}".format(symbol_regex), calculate[0])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    if type2 != 'string' or type3 != 'int':
+        Error.error_exit("ZLY TYP PRE STRI2INT OPERACIU!\n", 53)
+
+    if int(op3) >= len(op2) or int(op3) < 0:
+        Error.error_exit("OP3 MIMO ROZSAHU STRLEN(op2)\n", 58)
+    result = ord(op2[int(op3)])
+
+    stack.append("int@{}".format(str(result).lower()))
+
+    calculate.clear()
+
+
+def int2charS():
+    global calculate
+
+    for m in range(0, 1):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    op2, type2 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if not (re.match(r"{}".format(symbol_regex), calculate[0])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if type2 != 'int':
+        Error.error_exit("ZLY TYP PRE INT2CHAR OPERACIU!\n", 53)
+
+    try:
+        result = chr(int(op2))
+    except:
+        Error.error_exit("ZLA INT2CHAR OPERACIA\n", 58)
+
+    stack.append("string@{}".format(str(result)))
+
+    calculate.clear()
+
+
+def logicalS(operator):
+    global calculate
+
+    for m in range(0, 2):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    if not (re.match(r"{}".format(symbol_regex), calculate[0])):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    op3, type3 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+
+    calculate.clear()
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    if type2 != 'bool' or type3 != 'bool':
+        Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+    else:
+        if operator == 'or':
+            if op2 == 'true' or op3 == 'true':
+                result = 'true'
+            else:
+                result = 'false'
+        if operator == '=':
+            if op2 == 'false' and op3 == 'false':
+                result = 'false'
+            else:
+                result = ops["{}".format(operator)](op2, op3)
+
+    stack.append("bool@{}".format(str(result).lower()))
+
+    if type2 != type3:
+        Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+
+
+def logicalSnot(operator):
+    global calculate
+    for m in range(0, 1):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    if not (re.match(r"{}".format(symbol_regex), calculate[0])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if type2 != 'bool':
+        Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+    else:
+        if op2 == 'true':
+            result = 'false'
+        elif op2 == 'false':
+            result = 'true'
+
+    stack.append("bool@{}".format(str(result).lower()))
+    calculate.clear()
+
+
+def jumpifeqS(operator):
+    global calculate
+    global index
+
+    if len(calculate) < 1:
+        return
+
+    for m in range(0, 2):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    result = False
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+
+    if not re.match(r"^label@\S+$", calculate[0]):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if not (re.match(r"{}".format(symbol_regex), calculate[1])):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+    if not (re.match(r"{}".format(symbol_regex), calculate[2])):
+        Error.error_exit("ZLY ARGUMENT 3! {}\n".format(operator), 53)
+
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+    op3, type3 = calculate[2].split('@', 1)[1], calculate[2].split('@', 1)[0]
+
+    if op1 not in labels.keys():
+        Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if re.match(r"{}".format(varregex), op3):
+        checkIfVarExists(localframe, tempframe, op3)
+        if not (var.get(op3) or varLF.get(op3) or varTF.get(op3)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type3, op3 = variableIsGiven(op3)
+
+    calculate.clear()
+    if type2 != 'nil' and type3 != 'nil':
+        if type2 != type3:
+            Error.error_exit("ZLY TYP PRE JUMPIFEQ OPERACIU!\n", 53)
+        if type2 == 'int' or type3 == 'int':
+            if type2 != type3:
+                Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+            result = ops["{}".format(operator)](int(op2), int(op3))
+        else:
+            result = ops["{}".format(operator)](op2, op3)
+    else:
+        if operator == '=':
+            if type2 == 'nil' and type3 == 'nil':
+                result = True
+            else:
+                result = False
+        elif operator == '!=':
+            if type2 == 'nil' and type3 == 'nil':
+                result = False
+            else:
+                result = True
+
+    if result:
+        index = labels.get(op1) - 1
+
+
+def compareS(operator):
+    global calculate
+
+    for m in range(0, 2):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+
+    if not re.match(r"{}".format(symbol_regex), calculate[0]):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if not re.match(r"{}".format(symbol_regex), calculate[1]):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    calculate.clear()
+
+    if re.match(r"{}".format(varregex), op1):
+        checkIfVarExists(localframe, tempframe, op1)
+        if not (var.get(op1) or varLF.get(op1) or varTF.get(op1)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type1, op1 = variableIsGiven(op1)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if (type1 == 'nil' or type2 == 'nil') and operator != '=':
+        Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+    if (type1 == 'int' or type2 == 'int') and operator != '=':
+        if type1 != type2:
+            Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+        result = ops["{}".format(operator)](int(op1), int(op2))
+    else:
+        result = ops["{}".format(operator)](op1, op2)
+
+
+    result = 'bool@' + str(result).lower()
+    stack.append(result)
+
+    if type1 != type2:
+        if (type1 == 'nil' or type2 == 'nil') and operator == '=':
+            return
+        Error.error_exit("ZLY TYP PRE COMPARE OPERACIU!\n", 53)
+
+
+def arithmeticsS(operator):
+    global stack
+    global calculate
+
+    for m in range(0, 2):
+        try:
+            calculate.append(stack.pop())
+        except:
+            Error.error_exit("STACK JE PRAZDNY!\n", 56)
+
+    op1, type1 = calculate[0].split('@', 1)[1], calculate[0].split('@', 1)[0]
+    op2, type2 = calculate[1].split('@', 1)[1], calculate[1].split('@', 1)[0]
+
+
+    if not re.match(r"{}".format(symbol_regex), calculate[0]):
+        Error.error_exit("ZLY ARGUMENT 1! {}\n".format(operator), 53)
+
+    if not re.match(r"{}".format(symbol_regex), calculate[1]):
+        Error.error_exit("ZLY ARGUMENT 2! {}\n".format(operator), 53)
+
+    if re.match(r"{}".format(varregex), op1):
+        checkIfVarExists(localframe, tempframe, op1)
+        if not (var.get(op1) or varLF.get(op1) or varTF.get(op1)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type1, op1 = variableIsGiven(op1)
+
+    if re.match(r"{}".format(varregex), op2):
+        checkIfVarExists(localframe, tempframe, op2)
+        if not (var.get(op2) or varLF.get(op2) or varTF.get(op2)):
+            Error.error_exit("PREMENNA JE PRAZDNA! {}\n".format(operator), 56)
+        type2, op2 = variableIsGiven(op2)
+
+    if type1 != 'int' or type2 != 'int':
+        Error.error_exit("ZLY TYP PRE ARITMETICKU OPERACIU!\n", 53)
+
+    if operator == '/' and int(op2) == 0:
+        Error.error_exit("ZERO DIVISION!\n", 57)
+    result = ops["{}".format(operator)](int(op2), int(op1))
+    result = 'int@' + str(result)
+    stack.append(result)
+
+    calculate.clear()
 
 
 def setchar():
@@ -1290,10 +1704,8 @@ except:
 
 for child in root:
     for checkkeys in child.attrib.keys():
-        if checkkeys != 'order' and checkkeys != 'opcode':
-            Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
         argcontrol.append(checkkeys)
-    if len(argcontrol) != 2 or argcontrol[0] != 'order' or argcontrol[1] != 'opcode':
+    if len(argcontrol) < 2 or argcontrol[0] != 'order' or argcontrol[1] != 'opcode':
         Error.error_exit("BAD XML ATTRIBUTES FORMAT!\n", 32)
     argcontrol.clear()
     if child.tag != 'instruction':
