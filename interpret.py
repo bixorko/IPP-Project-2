@@ -5,6 +5,11 @@ import operator
 
 inputfile = sys.stdin
 sourcefile = sys.stdin
+outputfile = ''
+statistic = []
+varscount = 0
+instscount = 0
+isstats = False
 symbol_regex = '^(var@(GF|LF|TF)@[a-zA-Z\-_$&%*!?][a-zA-Z0-9\-_$&%*!?]*)|(nil@nil)|(int@[+|-]?[0-9]+)|(bool@(true|false))|(string@(\S)*)$'
 varregex = "^(GF|LF|TF)@[a-zA-Z-_$&%*!?][a-zA-Z0-9-_$&%*!?]*$"
 stringregex = "^string@(\S)+$"
@@ -55,33 +60,59 @@ Error = ErrorHandling
 def parseArguments():
     global inputfile
     global sourcefile
+    global outputfile
+    global statistic
 
-    if len(sys.argv) == 2:
-        if sys.argv[1] == '--help':
+    isinput = False
+    issource = False
+    global isstats
+    firsttime = True
+
+    for arg in sys.argv:
+        if firsttime:
+            firsttime = False
+        elif arg == '--help':
+            if len(sys.argv) != 2:
+                Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
+                                 "PRE NAPOVEDU NAPISTE --help\n", 10)
             printHelp()
-        elif re.match(r"^--input=\S+$", sys.argv[1]):
-            inputfile = sys.argv[1].partition('=')[2]
-        elif re.match(r"^--source=\S+$", sys.argv[1]):
-            sourcefile = sys.argv[1].partition('=')[2]
 
-    elif len(sys.argv) == 3:
-        if re.match(r"^--input=\S+$", sys.argv[1]):
-            inputfile = sys.argv[1].partition('=')[2]
-        elif re.match(r"^--source=\S+$", sys.argv[1]):
-            sourcefile = sys.argv[1].partition('=')[2]
+        elif re.match(r"^--input=\S+$", arg):
+            if isinput:
+                Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
+                                 "PRE NAPOVEDU NAPISTE --help\n", 10)
+            inputfile = arg.partition('=')[2]
+            isinput = True
+
+        elif re.match(r"^--source=\S+$", arg):
+            if issource:
+                Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
+                                 "PRE NAPOVEDU NAPISTE --help\n", 10)
+            sourcefile = arg.partition('=')[2]
+            issource = True
+
+        elif re.match(r"^--stats=\S+$", arg):
+            if isstats:
+                Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
+                                 "PRE NAPOVEDU NAPISTE --help\n", 10)
+            outputfile = arg.partition('=')[2]
+            isstats = True
+
+        elif arg == '--insts':
+            statistic.append('--insts')
+
+        elif arg == '--vars':
+            statistic.append('--vars')
+
         else:
             Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
                              "PRE NAPOVEDU NAPISTE --help\n", 10)
-            exit(10)
-        if re.match(r"^--input=\S+$", sys.argv[2]):
-            inputfile = sys.argv[2].partition('=')[2]
-        elif re.match(r"^--source=\S+$", sys.argv[2]):
-            sourcefile = sys.argv[2].partition('=')[2]
-        else:
-            Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
-                             "PRE NAPOVEDU NAPISTE --help\n", 10)
 
-    else:
+    if not issource and not isinput:
+        Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
+                         "PRE NAPOVEDU NAPISTE --help\n", 10)
+
+    if len(statistic) != 0 and not isstats:
         Error.error_exit("ZLE ZADANE ARGUMENTY!\n"
                          "PRE NAPOVEDU NAPISTE --help\n", 10)
 
@@ -150,6 +181,7 @@ def parseXML(child):
     argumentcount = len(child)
     global index
     global callWasUsed
+    global instscount
 
     localframe = LFBoolStack[len(LFBoolStack)-1]
 
@@ -158,6 +190,7 @@ def parseXML(child):
             Error.error_exit("BAD XML!\n", 32)
         varTF = {}
         tempframe = True
+        instscount += 1
         return
 
     if opcode == 'PUSHFRAME':
@@ -174,6 +207,7 @@ def parseXML(child):
         LFStack.append(varLF)
         LFBoolStack.append(True)
         tempframe = False
+        instscount += 1
         return
 
     if opcode == 'POPFRAME':
@@ -192,6 +226,7 @@ def parseXML(child):
         varLF = LFStack.pop()
         LFStack.append(varLF)
         tempframe = True
+        instscount += 1
         return
 
     if opcode == 'RETURN':
@@ -201,78 +236,91 @@ def parseXML(child):
             Error.error_exit("CALL NEBOL POUZITY!\n", 56)
         index = callStackIndex.pop()
         callStack.pop()
+        instscount += 1
         return
 
     if opcode == 'ADDS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         arithmeticsS('+')
+        instscount += 1
         return
 
     if opcode == 'IDIVS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         arithmeticsS('/')
+        instscount += 1
         return
 
     if opcode == 'MULS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         arithmeticsS('*')
+        instscount += 1
         return
 
     if opcode == 'SUBS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         arithmeticsS('-')
+        instscount += 1
         return
 
     if opcode == 'EQS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         compareS('=')
+        instscount += 1
         return
 
     if opcode == 'LTS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         compareS('>')
+        instscount += 1
         return
 
     if opcode == 'GTS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         compareS('<')
+        instscount += 1
         return
 
     if opcode == 'ANDS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         logicalS('=')
+        instscount += 1
         return
 
     if opcode == 'ORS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         logicalS('or')
+        instscount += 1
         return
 
     if opcode == 'NOTS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         logicalSnot('not')
+        instscount += 1
         return
 
     if opcode == 'STRI2INTS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         stri2intS()
+        instscount += 1
         return
 
     if opcode == 'INT2CHARS':
         if argumentcount != 0:
             Error.error_exit("BAD XML!\n", 32)
         int2charS()
+        instscount += 1
         return
 
     if argumentcount == 0:
@@ -303,6 +351,8 @@ def functions(opcode, arg, argumentcount):
     global returnIndex
     global callStackIndex
     global stack
+    global instscount
+    global varscount
 
     if opcode == 'DEFVAR':
         controlRightCountOfArguments(argumentcount, 1)
@@ -328,47 +378,59 @@ def functions(opcode, arg, argumentcount):
             varTF.update({arg.text: ""})
         if arg.text[0:2] == 'LF':
             varLF.update({arg.text: ""})
+        instscount += 1
+        varscount += 1
 
     elif opcode == 'MUL':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('*')
+        instscount += 1
 
     elif opcode == 'IDIV':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('/')
+        instscount += 1
 
     elif opcode == 'ADD':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('+')
+        instscount += 1
 
     elif opcode == 'SUB':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         arithmetic('-')
+        instscount += 1
 
     elif opcode == 'WRITE':
         controlRightCountOfArguments(argumentcount, 1)
         stdoutprint(arg.text)
+        instscount += 1
 
     elif opcode == 'EQ':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         compare('=')
+        instscount += 1
 
     elif opcode == 'LT':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         compare('<')
+        instscount += 1
 
     elif opcode == 'GT':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         compare('>')
+        instscount += 1
 
     elif opcode == 'LABEL':
+        controlRightCountOfArguments(argumentcount, 1)
+        instscount += 1
         pass
 
     elif opcode == 'JUMP':
@@ -376,16 +438,19 @@ def functions(opcode, arg, argumentcount):
         if arg.text not in labels.keys():
             Error.error_exit("NEEXISTUJUCE NAVESTI! {}\n".format(arg.text), 52)
         index = labels.get(arg.text) - 1
+        instscount += 1
 
     elif opcode == 'JUMPIFNEQ':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         jumpifeq('!=')
+        instscount += 1
 
     elif opcode == 'JUMPIFEQ':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         jumpifeq('=')
+        instscount += 1
 
     elif opcode == 'CALL':
         controlRightCountOfArguments(argumentcount, 1)
@@ -395,97 +460,117 @@ def functions(opcode, arg, argumentcount):
         returnIndex = index
         callStackIndex.append(returnIndex)
         index = labels.get(arg.text) - 1
+        instscount += 1
 
     elif opcode == 'PUSHS':
         controlRightCountOfArguments(argumentcount, 1)
         calculate.append("{}@{}".format(argtype, arg.text))
         stackPush()
+        instscount += 1
 
     elif opcode == 'POPS':
         controlRightCountOfArguments(argumentcount, 1)
         calculate.append("{}@{}".format(argtype, arg.text))
         stackPop()
+        instscount += 1
 
     elif opcode == 'AND':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         logical('=')
+        instscount += 1
 
     elif opcode == 'OR':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         logical('or')
+        instscount += 1
 
     elif opcode == 'NOT':
         controlRightCountOfArguments(argumentcount, 2)
         calculate.append("{}@{}".format(argtype, arg.text))
         logicalnot('not')
+        instscount += 1
 
     elif opcode == 'STRI2INT':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         stri2int()
+        instscount += 1
 
     elif opcode == 'INT2CHAR':
         controlRightCountOfArguments(argumentcount, 2)
         calculate.append("{}@{}".format(argtype, arg.text))
         int2char()
+        instscount += 1
 
     elif opcode == 'READ':
         controlRightCountOfArguments(argumentcount, 2)
         calculate.append("{}@{}".format(argtype, arg.text))
         readInstruction()
+        instscount += 1
 
     elif opcode == 'CONCAT':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         concat()
+        instscount += 1
 
     elif opcode == 'STRLEN':
         controlRightCountOfArguments(argumentcount, 2)
         calculate.append("{}@{}".format(argtype, arg.text))
         strlen()
+        instscount += 1
 
     elif opcode == 'GETCHAR':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         getchar()
+        instscount += 1
 
     elif opcode == 'SETCHAR':
         controlRightCountOfArguments(argumentcount, 3)
         calculate.append("{}@{}".format(argtype, arg.text))
         setchar()
+        instscount += 1
 
     elif opcode == 'EXIT':
         controlRightCountOfArguments(argumentcount, 1)
         calculate.append("{}@{}".format(argtype, arg.text))
+        instscount += 1
         exitProg()
 
     elif opcode == 'MOVE':
         controlRightCountOfArguments(argumentcount, 2)
         calculate.append("{}@{}".format(argtype, arg.text))
         move()
+        instscount += 1
 
     elif opcode == 'TYPE':
         controlRightCountOfArguments(argumentcount, 2)
         calculate.append("{}@{}".format(argtype, arg.text))
         typecheck()
+        instscount += 1
 
     elif opcode == 'DPRINT':
+        instscount += 1
         pass
 
     elif opcode == 'BREAK':
+        instscount += 1
         pass
 
     elif opcode == 'JUMPIFEQS':
         controlRightCountOfArguments(argumentcount, 1)
         calculate.append("{}@{}".format(argtype, arg.text))
         jumpifeqS('=')
+        instscount += 1
 
     elif opcode == 'JUMPIFNEQS':
         controlRightCountOfArguments(argumentcount, 1)
         calculate.append("{}@{}".format(argtype, arg.text))
         jumpifeqS('!=')
+        instscount += 1
 
     else:
         Error.error_exit("UNKNOWN OPCODE!\n", 32)
@@ -1684,9 +1769,12 @@ parseArguments()
 
 try:
     if inputfile.name == '<stdin>':
-        pass
+        input()
 except:
-    sys.stdin = open(inputfile, "r")
+    try:
+        sys.stdin = open(inputfile, "r")
+    except:
+        Error.error_exit("SUBOR NEEXISTUJE!\n", 11)
 
 try:
     root = ET.parse(sourcefile).getroot()
@@ -1748,3 +1836,12 @@ while i < len(instructions):
     parseXML(child)
     index += 1
     i = index
+
+if isstats:
+    file = open(outputfile, "w+")
+    for stat in statistic:
+        if stat == '--vars':
+            file.write(str(varscount))
+        elif stat == '--insts':
+            file.write(str(instscount))
+    file.close()
