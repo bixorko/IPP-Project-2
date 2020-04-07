@@ -130,12 +130,14 @@ def controlFlowForArgs1(args):
         else:
             Error.error_exit("BAD XML!\n",32)
 
-    args.remove(args.getchildren()[0])
+    for arg in list(args):
+        args.remove(arg)
     args.append(final[0])
 
 
 def controlFlowForArgs2(args):
     final = []
+
     for arg in args:
         if arg.tag == 'arg1':
             final.insert(0, arg)
@@ -144,8 +146,9 @@ def controlFlowForArgs2(args):
         else:
             Error.error_exit("BAD XML!\n", 32)
 
-    args.remove(args.getchildren()[0])
-    args.remove(args.getchildren()[0])
+    for arg in list(args):
+        args.remove(arg)
+
     args.append(final[0])
     args.append(final[1])
 
@@ -162,9 +165,9 @@ def controlFlowForArgs3(args):
         else:
             Error.error_exit("BAD XML!\n", 32)
 
-    args.remove(args.getchildren()[0])
-    args.remove(args.getchildren()[0])
-    args.remove(args.getchildren()[0])
+    for arg in list(args):
+        args.remove(arg)
+
     args.append(final[0])
     args.append(final[1])
     args.append(final[2])
@@ -200,7 +203,7 @@ def parseXML(child):
             Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI PUSHFRAME!\n", 55)
         varLF = varTF
         varTF = {}
-        for item in varLF.keys():
+        for item in list(varLF.keys()):
             if re.match(r"TF@\S", item):
                 string = item.split('@', 1)[1]
                 varLF[f'LF@{string}'] = varLF.pop(f'TF@{string}')
@@ -217,7 +220,7 @@ def parseXML(child):
             Error.error_exit("PRISTUP K NEDEFINOVANEMU RAMCI POPFRAME!\n", 55)
 
         varTF = LFStack.pop()
-        for item in varTF.keys():
+        for item in list(varTF.keys()):
             if re.match(r"LF@\S", item):
                 string = item.split('@', 1)[1]
                 varTF[f'TF@{string}'] = varTF.pop(f'LF@{string}')
