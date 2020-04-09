@@ -1772,7 +1772,7 @@ parseArguments()
 
 try:
     if inputfile.name == '<stdin>':
-        input()
+        pass
 except:
     try:
         sys.stdin = open(inputfile, "r")
