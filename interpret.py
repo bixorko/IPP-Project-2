@@ -28,6 +28,11 @@ index = 0
 returnIndex = 0
 callWasUsed = False
 
+'''
+    Incializacia Stackov
+    pre Frame, zasobnik volania funkcii,
+    uchovavanie indexu skoku a pre samotny zasobnik pre instrukcie
+'''
 stack = []
 
 LFBoolStack = []
@@ -42,6 +47,12 @@ callStack.append(False)
 callStackIndex = []
 callStackIndex.append(-1)
 
+'''
+    Trieda zabezpecujuca volanie error msg + error code
+    pri chybe pocas behu programu
+    :param message = chybova hlaska
+    :param code    = chybovy kod
+'''
 
 class ErrorHandling:
     def __init__(self, message, code):
@@ -55,6 +66,12 @@ class ErrorHandling:
 
 
 Error = ErrorHandling
+
+
+'''
+    Funkcia pre parsovanie argumentov
+    podporuje aj parsovanie pre rozsirenie STATI
+'''
 
 
 def parseArguments():
@@ -117,9 +134,21 @@ def parseArguments():
                          "PRE NAPOVEDU NAPISTE --help\n", 10)
 
 
+'''
+    Pri zadani parametru --help 
+    sa zavola funkcia printHelp() ktora vypise jednoduchu napovedu
+'''
+
+
 def printHelp():
     print("THIS IS HELP\n")
     exit(0)
+
+
+'''
+    Funkcia pre kontrolu spravnosti poradaia <argx> elementov
+    - zoradi ich vzostupne
+'''
 
 
 def controlFlowForArgs1(args):
@@ -133,6 +162,12 @@ def controlFlowForArgs1(args):
     for arg in list(args):
         args.remove(arg)
     args.append(final[0])
+
+
+'''
+    Funkcia pre kontrolu spravnosti poradaia <argx> elementov
+    - zoradi ich vzostupne
+'''
 
 
 def controlFlowForArgs2(args):
@@ -153,6 +188,12 @@ def controlFlowForArgs2(args):
     args.append(final[1])
 
 
+'''
+    Funkcia pre kontrolu spravnosti poradaia <argx> elementov
+    - zoradi ich vzostupne
+'''
+
+
 def controlFlowForArgs3(args):
     final = []
     for arg in args:
@@ -171,6 +212,12 @@ def controlFlowForArgs3(args):
     args.append(final[0])
     args.append(final[1])
     args.append(final[2])
+
+
+'''
+    Volana z mainu, rozdeluje XML a podla opcode a poctu argumentov vola jednotlive funkcie
+    rozdelene podla operacnych kodov
+'''
 
 
 def parseXML(child):
@@ -342,6 +389,11 @@ def parseXML(child):
         # arg.tag == arg1, arg2 atd
         # arg.text == GF@a, 5, string, true, false....
         # arg.attrib.values()[0] == var, bool, string, int,...
+
+
+'''
+    Funkcia pre parsovanie opcodu s > 0 argumento(v/m)
+'''
 
 
 def functions(opcode, arg, argumentcount):
@@ -579,6 +631,23 @@ def functions(opcode, arg, argumentcount):
         Error.error_exit("UNKNOWN OPCODE!\n", 32)
 
 
+'''
+    OPCODE CAST PRE VYKONAVANIE JEDNOTLIVYCH OPERACNYCH KODOV
+    KAZDA FUNKCIA FUNGUJE NA ROVNAKOM PRINCIPE => NAPUSHUJE HODNOTY DO LISTu
+    KTORE SI POTOM FUNKCIA VYBERIE A PREVEDIE S NIM JEDNOTLIVE UKONY.
+'''
+
+'''
+    Prvych 8 funkcii su stack funkcie, jednotliva dokumentacia k nim sa nachadza nizsie
+    pri ich nestackovych funkciach
+'''
+
+'''
+    STACK Funkcia
+    prevedie znak z calculate[1] na calculate[0] pozicii na ASCII hodnotu vybraneho znaku
+'''
+
+
 def stri2intS():
     global calculate
 
@@ -620,6 +689,11 @@ def stri2intS():
     calculate.clear()
 
 
+'''
+    Stack funkcia, paralelna s funkciou stri2intS()
+'''
+
+
 def int2charS():
     global calculate
 
@@ -651,6 +725,13 @@ def int2charS():
     stack.append("string@{}".format(str(result)))
 
     calculate.clear()
+
+
+'''
+    LOGICAL STACK: logicalS(), logicalSnot()
+    STACK FUnkcia, zhodna s logical(), s vynimkou toho, ze do calculate su napushovane
+    hodnoty zo stacku
+'''
 
 
 def logicalS(operator):
@@ -898,6 +979,11 @@ def arithmeticsS(operator):
     calculate.clear()
 
 
+'''
+    Zmodifikuje znak retazca ulozeneho v calculate[0] na znak v retezci caluclate[2] na pozicii caluclate[1]
+'''
+
+
 def setchar():
     if len(calculate) < 3:
         return
@@ -955,6 +1041,12 @@ def setchar():
         varTF.update({op1: "string@{}".format(str(result))})
 
     calculate.clear()
+
+
+'''
+    Funkcia precita zo suboru zadaneho v parametri --input alebo vo forme <*.in
+    a ulozi nacitany riadok do premennej  
+'''
 
 
 def readInstruction():
@@ -1017,6 +1109,12 @@ def readInstruction():
         varTF.update({op1: f"{result}"})
 
 
+'''
+    Funkcia vyjme z vrcholu stacku hodnotu nachadzajucu sa tam, 
+    v pripade ze je zasobnik prazdny, program spadne s chybovyom kodom
+'''
+
+
 def stackPop():
     global stack
     if len(calculate) < 1:
@@ -1046,6 +1144,11 @@ def stackPop():
         varLF.update({op1: "{}@{}".format(type2, op2)})
     if op1[0:2] == 'TF':
         varTF.update({op1: "{}@{}".format(type2, op2)})
+
+
+'''
+    Funkcia umiestni na vrchol zasobnika hodnotu v caluclate[0]
+'''
 
 
 def stackPush():
